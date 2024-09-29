@@ -1,11 +1,19 @@
-# Makefile for setting up and running the web application
+.PHONY: install run clean
 
-.PHONY: install run
+VENV_DIR := venv
 
-install:
+install: $(VENV_DIR)/bin/activate
 	npm install
-	pip install -r requirements.txt
+	$(VENV_DIR)/bin/pip install -r requirements.txt
 
-run:
+$(VENV_DIR)/bin/activate:
+	python3 -m venv $(VENV_DIR)
+	$(VENV_DIR)/bin/pip install --upgrade pip
+
+run: $(VENV_DIR)/bin/activate
 	npm start &
-	python app.py
+	$(VENV_DIR)/bin/python app.py
+
+clean:
+	rm -rf $(VENV_DIR)
+	rm -rf node_modules
