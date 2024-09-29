@@ -47,7 +47,6 @@ class KMeans:
                     if self.isunassigned(j):
                         dists.append(min([self.dist(center, self.data[j])**2 for center in centers]))
                 probs = [dist / sum(dists) for dist in dists]  # Normalize using squared distances
-                print(sum(probs))
                 centers.append(self.data[np.random.choice(len(self.data), p=probs)])
             return np.array(centers)
         elif type == "manual" and self.selected_points:
@@ -73,9 +72,17 @@ class KMeans:
             for j in range(len(self.assignment)):
                 if self.assignment[j] == i:
                     cluster.append(self.data[j])
-            centers.append(np.mean(np.array(cluster), axis=0))
+            
+            if cluster:  # Check if the cluster is not empty
+                center = np.mean(np.array(cluster), axis=0)
+                centers.append(center)  # Append the computed center
+            else:
+                # Assign a default value for empty clusters
+                centers.append(np.zeros(self.data.shape[1]))  # Ensure this matches the data's feature size
 
-        return np.array(centers)
+        print("Centers:", centers)  # Debugging output
+        return np.array(centers)  # This should now work without errors
+        
     
     def unassign(self):
         self.assignment = [-1 for _ in range(len(self.data))]
@@ -91,7 +98,9 @@ class KMeans:
         return sum((x - y)**2) ** (1/2)
 
     def lloyds(self):
+        print("Running Lloyd's algorithm")
         centers = self.initialize(self.init_method)
+        print("Initial centers:", centers)
         self.snap(centers)  # Save the initial centers
         self.make_clusters(centers)
         new_centers = self.compute_centers()
@@ -111,6 +120,7 @@ def run_kmeans():
     k = request.json.get('k', 4)  # Default to 4 if not provided
     init_method = request.json.get('initMethod', 'random')  # Default to 'random'
     selected_points = request.json.get('selectedPoints', [])
+
 
     # Convert the data to a numpy array
     X = np.array(data)

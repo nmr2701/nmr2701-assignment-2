@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import './App.css';
 import axios from 'axios';
 import Plot from 'react-plotly.js';
-
+import * as d3 from 'd3'; // Import d3
 
 
 function App() {
@@ -17,6 +17,8 @@ function App() {
   const [clusterColors, setClusterColors] = useState([]);
 
 
+  const plotRef = useRef(null); // Reference to the Plot component
+  const kRef = useRef(k); // Create a ref to store the current value of k
 
   function generateClusterColors(numClusters) {
     const colors = [];
@@ -27,9 +29,70 @@ function App() {
     return colors;
   }
 
+
+  useEffect(() => {
+    kRef.current = k; // Update the ref whenever k changes
+  }, [k]);
+
+
   useEffect(() => {
     handleGenerateData();
   } , []);
+
+  useEffect(() => {
+    if (initMethod === 'manual' && currentStep === -1) {
+      attachClickListener(); // Attach click listener when in manual mode
+    } else {
+      detatchClickListener(); // Detach click listener when not in manual mode
+    }
+
+    
+  }, [initMethod, currentStep]);
+
+
+  useEffect(() => {
+    setSelectedPoints([]); // Reset selected points when the data changes
+  }
+  , [initMethod, k]);
+
+  useEffect(() => {
+    console.log('Selected Points:', selectedPoints);
+  }, [selectedPoints]);
+
+
+
+  const attachClickListener = () => {
+  if (plotRef.current) {
+    const plotElement = d3.select(plotRef.current.getElementsByClassName('plotly')[0]);
+    plotElement.on('click', (event) => {
+      const bgrect = plotElement.select('.gridlayer').node().getBoundingClientRect();
+
+      const x = ((event.clientX - bgrect['x']) / (bgrect['width'])) * (chartLayout.xaxis.range[1] - chartLayout.xaxis.range[0]) + chartLayout.xaxis.range[0];
+      const y = ((event.clientY - bgrect['y']) / (bgrect['height'])) * (chartLayout.yaxis.range[0] - chartLayout.yaxis.range[1]) + chartLayout.yaxis.range[1];
+
+      if (x >= chartLayout.xaxis.range[0] && x <= chartLayout.xaxis.range[1] &&
+          y >= chartLayout.yaxis.range[0] && y <= chartLayout.yaxis.range[1]) {
+        
+        // Use the ref to check the current value of k
+        setSelectedPoints(prevPoints => {
+          if (prevPoints.length < kRef.current) { // Use kRef.current instead of k
+            return [...prevPoints, [x, y]];
+          }
+          return prevPoints;
+        });
+      }
+    });
+  }
+};
+
+
+
+  const detatchClickListener = () => {
+    if (plotRef.current) {
+      const plotElement = d3.select(plotRef.current.getElementsByClassName('plotly')[0]);
+      plotElement.on('click', null); // Remove click listener
+    }
+  };
 
   const handleStepThrough = () => {
 
@@ -73,14 +136,8 @@ function App() {
     setSelectedPoints([]); // Reset selected points
   };
 
-  useEffect(() => {
-    console.log('Selected Points:', selectedPoints);
-  }, [selectedPoints]);
 
-  useEffect(() => {
-    setSelectedPoints([]); // Reset selected points when the data changes
-  }
-  , [initMethod]);
+
 
 
   const handleRunKMeans = async ( type ) => {
@@ -94,6 +151,7 @@ function App() {
     }
 
     try {
+      console.log('Running KMeans:', k, initMethod, selectedPoints);
       const response = await axios.post('http://127.0.0.1:5000/kmeans', {
         k: k,
         initMethod: initMethod,
@@ -119,11 +177,7 @@ function App() {
       console.error('Error running KMeans:', error);
     }
   };
-  const handleChartClick = (event) => {
-    if (initMethod === 'manual' && selectedPoints.length < k && currentStep === -1) { 
-      const point = [event.points[0].x, event.points[0].y];
-      setSelectedPoints([...selectedPoints, point]);
-  }};
+
 
 
 
@@ -163,9 +217,6 @@ function App() {
     },
   ];
 
-  useEffect(() => {
-    console.log("data",data);
-  } , [data]);
 
  
   const chartLayout = {
@@ -212,13 +263,13 @@ function App() {
       </div>
 
           {data && data.length > 0 ? ( // Check if data is available
-            <Plot
-              id='chart'
-              data={chartData} 
-              options={chartLayout}
-              onClick={handleChartClick}
-
-            />
+            <div ref={plotRef}> 
+              <Plot
+                id='chart'
+                data={chartData} 
+                layout={chartLayout}
+              />
+          </div>
           ) : (
             <p>No data available to display the chart.</p> // Fallback message
           )}
