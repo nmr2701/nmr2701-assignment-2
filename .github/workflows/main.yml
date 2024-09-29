@@ -1,0 +1,32 @@
+name: Python Application
+
+on:
+  push:
+    branches:
+      - main  # Change this to your default branch if it's not 'main'
+  pull_request:
+    branches:
+      - main  # Change this to your default branch if it's not 'main'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'  # Specify the Python version you want to use
+
+    - name: Install dependencies
+      run: |
+        make install
+
+    - name: Run application
+      run: |
+        make run &
+        sleep 5  # Wait for the server to start
