@@ -11,7 +11,7 @@ $(VENV_DIR)/bin/activate:
 	$(VENV_DIR)/bin/pip install --upgrade pip
 
 run: $(VENV_DIR)/bin/activate
-	npm start &
+	npm run start &
 	$(VENV_DIR)/bin/python app.py
 
 clean:
